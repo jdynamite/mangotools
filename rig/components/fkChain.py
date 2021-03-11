@@ -14,8 +14,9 @@ from rig.maya.control import Control
 
 class FkChain(BaseRig):
 
-    def __init__(self, *args, **kwargs):
-        super(FkChain, self).__init__(*args, **kwargs)
+    def __init__(self, joints, shape='sphere', **kwargs):
+        super(FkChain, self).__init__(joints, **kwargs)
+        self.shape = shape
     
     def install(self):
         """
@@ -28,9 +29,20 @@ class FkChain(BaseRig):
         for jnt in self.joints:
             jnt = MayaBaseNode(jnt)
             side = jnt.side
-            desc = jnt.descriptor
-            ctrl = Control.create(descriptor=self.descriptor or desc, role='fk', side=side, snap_to=jnt.long_name, shape='sphere')
-            ctrl.offset()
+            desc = self.descriptor or jnt.descriptor
+            ctrl = Control.create(descriptor=desc, role='fk', side=side, snap_to=jnt.long_name, shape=self.shape)
+            
+            if not self.color:
+                print(side)
+                if side == 'l':
+                    ctrl.color = 'blue'
+                elif side == 'r':
+                    ctrl.color = 'red'
+            else:
+                ctrl.color = self.color
+
+            # Offset once
+            ctrl.offset(n=1)
             
             # Parent null under ancestor
             if ancestor:

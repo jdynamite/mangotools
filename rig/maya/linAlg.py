@@ -6,7 +6,7 @@ except ImportError:
     raise
 
 import logging
-from mayaUtils import dag, get_logger
+from rig.maya import dag, get_logger
 log = get_logger(__name__)
 
 def get_pole_vector(A, B, C, factor=2):
@@ -168,15 +168,15 @@ def snap(A, B, rotate=True, translate=True):
     trans_result = om.MTransformationMatrix(result)
 
     mat_local_a = dag.get_matrix(A, space='object')[0]
-    a_result = om.MTransformationMatrix(mat_local_a)
+    result_a = om.MTransformationMatrix(mat_local_a)
     
     if translate:
-        a_result.setTranslation(trans_result.translation(om.MSpace.kTransform), 
+        result_a.setTranslation(trans_result.translation(om.MSpace.kTransform), 
                                 om.MSpace.kTransform)
     
     if rotate:
-        a_result.setRotation(trans_result.rotation())
+        result_a.setRotation(trans_result.rotation())
     
     # Apply result to A
     xform_a = dag.get_function_sets(A, fn=om.MFnTransform)[0]
-    xform_a.setTransformation(a_result)
+    xform_a.setTransformation(result_a)

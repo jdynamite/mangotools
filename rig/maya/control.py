@@ -10,6 +10,7 @@ import json
 import pickle
 from six import string_types
 
+from rig.config import naming
 from rig.utils import dataIO
 from rig.maya import get_logger
 from rig.maya.base import MayaBaseNode
@@ -33,13 +34,13 @@ class Control(MayaBaseNode):
     EXT = '.shapes'
 
     def __init__(self, 
-                 name=None,
+                 name,
                  role=None, 
                  descriptor=None, 
                  region=None, 
                  side=None):
-
-        super(Control, self).__init__(name=name,
+  
+        super(Control, self).__init__(name,
                                       node_type=self.NODETYPE, 
                                       role=role, 
                                       descriptor=descriptor, 
@@ -56,6 +57,7 @@ class Control(MayaBaseNode):
 
     @classmethod
     def create(cls,
+               name=None,
                descriptor=None,
                role=None,
                region=None,
@@ -68,10 +70,12 @@ class Control(MayaBaseNode):
         """
         Create a new controller in maya and instance as class
         """
-        name = cls.compose_name(descriptor=descriptor, role=role, region=region, side=side)
+        if not name:
+            name = cls.compose_name(node_type=cls.NODETYPE, descriptor=descriptor, role=role, region=region, side=side)
+        
         name = cmds.createNode("transform", name=name)
         
-        control = cls(name=name, descriptor=descriptor, role=role, region=region, side=side)
+        control = cls(name, descriptor=descriptor, role=role, region=region, side=side)
         
         if snap_to:
             control.snap_to(snap_to)
@@ -283,11 +287,12 @@ class Control(MayaBaseNode):
         Get furthest ancestor that is a null to this object
         """
         p = cmds.listRelatives(self.long_name, parent=True)
-
-        if p:
+        
+        if p and self.CONFIG.NULL in p[0]:
             p = MayaBaseNode(p[0])
             old_p = p
         else:
+            log.debug("Parent {} is not a null".format(p))
             return None
 
         while p and self.CONFIG.NULL in p.short_name:
@@ -303,16 +308,19 @@ class Control(MayaBaseNode):
     @parent.setter
     def parent(self, new_parent):
         if isinstance(new_parent, MayaBaseNode):
-                new_parent = new_parent.long_name
+            new_parent = new_parent.long_name
 
         if not self.null:
             try:
                 cmds.parent(self.long_name, new_parent)
+                log.debug("Parented {} under {}".format(self.nice_name, new_parent))
+                self._parent = new_parent
             except RuntimeError:
                 msg = "Failed to parent {} under {}".format(self.short_name, new_parent)
                 log.warning(msg, exc_info=True)
         
         elif new_parent != self.null.parent:
+            log.debug("Parenting null {} to parent: {}".format(self.null.nice_name, new_parent))
             self.null.parent = new_parent
 
     def set_shape(self, new_shape, replace=True):
@@ -447,19 +455,24 @@ class Control(MayaBaseNode):
     def insert_parent(self):
         """
         """
+        # Record current parent
         orig_par = self.parent # could be None
+        
+        # Get naming flags
         name_args = self.as_dict()
         name_args.update(dict(node_type=self.CONFIG.NULL))
-        null_name = super(Control, self).compose_name(**name_args)
+        null_name = self.compose_name(**name_args)
         
         log.debug("New null name is: {}".format(null_name))
-        dup = cmds.duplicate(self.short_name, name=null_name)[0]
-        dup = MayaBaseNode(dup)
-        cmds.delete(dup.shapes)
+        dup = MayaBaseNode(cmds.duplicate(self.short_name, name=null_name)[0])
         
-        # Swap parents
+        if dup.shapes:
+            cmds.delete(dup.shapes)
+        
+        # Parent this control under duplicate
         self.parent = dup
         
+        # Parent duplicate under my original parent
         if orig_par:
             dup.parent = orig_par
 

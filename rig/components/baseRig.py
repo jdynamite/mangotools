@@ -4,7 +4,7 @@ from six import string_types
 
 try:
     from maya import cmds
-    from mayaUtils import dag
+    from rig.maya import dag
 except ImportError:
     print("Must be in a maya environment!")
     raise
@@ -25,7 +25,7 @@ class BaseRig(object):
             self.joints = joints
         self.naming = BaseRig.NAMING
         self.descriptor = descriptor
-        self.color = color or 'yellow'
+        self.color = color
     
     def install(self):
         """

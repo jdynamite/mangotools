@@ -35,6 +35,9 @@ class MayaBaseNode(Naming):
                  region=None, 
                  side=None):
         
+        if isinstance(name, type(self)):
+            name = name.short_name
+
         assert cmds.objExists(name), "{} doesn't exist".format(name)
         
         # instance naming related class properties
@@ -43,7 +46,7 @@ class MayaBaseNode(Naming):
                                            role=role,
                                            descriptor=descriptor,
                                            region=region,
-                                           side=side)        
+                                           side=side)
 
         self._list = dag.get_list(name)
         self._mobject = dag.get_mobjects(name, self._list)[0]
@@ -174,6 +177,8 @@ class MayaBaseNode(Naming):
         
         try:
             cmds.parent(self.long_name, par)
+            log.debug("Parented {} under {}".format(self.nice_name, par))
+            self._parent = par
         except RuntimeError:
             msg = "Failed to parent {} under {}".format(self.short_name, par)
             log.warning(msg, exc_info=True)

@@ -11,6 +11,9 @@ def create_line(objects, attach=True, attachParents=[], name=""):
     Creates a line between objects, that optionally
     attaches to each
     """
+    if not name:
+        name = "line_display"
+
     print("Attach is: {}".format(attach))
     positions = get_positions(objects)
     curve = create_from_points(positions, name=name, degree=1)

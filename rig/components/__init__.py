@@ -3,11 +3,41 @@ try:
 except ImportError:
     print("Must be in a maya environment!")
 
+from rig.config.naming import Naming
 from rig.maya.base import MayaBaseNode
 from rig.maya import dag
 
 compose = MayaBaseNode.compose_name
 
+
+def make_space_grp(driver, name=None, parent='grp_spaces'):
+    """
+    Make a space group that is driven through a parent offset matrix
+    by the passed in argument: driver
+    """
+
+    if not isinstance(driver, MayaBaseNode):
+        driver = MayaBaseNode(driver)
+
+    if not name:
+        name = Naming(driver.nice_name)
+        name.node_type = 'space'
+        name.role = None
+        name = str(name)
+    
+    if not cmds.objExists(name):
+        space = MayaBaseNode(cmds.group(empty=True, name=name))
+    else:
+        space = MayaBaseNode(name)
+
+    cmds.connectAttr(driver.plug('worldMatrix[0]'), 
+                     space.plug('offsetParentMatrix'))
+
+    if cmds.objExists(parent):
+        space.parent = parent
+    
+    return space
+    
 
 def add_no_roll_joints(start_jnt, end_jnt, n=3, source_axis="X", target_axis="X"):
     """
